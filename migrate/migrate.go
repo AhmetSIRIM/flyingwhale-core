@@ -7,6 +7,7 @@
 package migrate
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io/fs"
@@ -53,9 +54,9 @@ func loadMigrations(source fs.FS) ([]migration, error) {
 	return loaded, nil
 }
 
-func schemaVersion(db *sql.DB) (int, error) {
+func schemaVersion(ctx context.Context, db *sql.DB) (int, error) {
 	var version int
-	if err := db.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+	if err := db.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version); err != nil {
 		return 0, fmt.Errorf("read user_version: %w", err)
 	}
 	return version, nil
@@ -71,12 +72,16 @@ func schemaVersion(db *sql.DB) (int, error) {
 // source with no migrations/ directory, or one where it is empty, is an
 // error rather than a no-op. Any .sql file inside migrations/ whose name is
 // not prefixed with a numeric NNNN version fails the whole run.
-func Apply(db *sql.DB, source fs.FS) error {
+//
+// The context bounds the whole run. A canceled context fails the run
+// closed: the transaction of the migration in flight rolls back, so a
+// canceled run never leaves a partially applied migration committed.
+func Apply(ctx context.Context, db *sql.DB, source fs.FS) error {
 	loaded, err := loadMigrations(source)
 	if err != nil {
 		return err
 	}
-	current, err := schemaVersion(db)
+	current, err := schemaVersion(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -85,26 +90,26 @@ func Apply(db *sql.DB, source fs.FS) error {
 		if m.version <= current {
 			continue
 		}
-		if err := applyMigration(db, m); err != nil {
+		if err := applyMigration(ctx, db, m); err != nil {
 			return fmt.Errorf("migration %s failed: %w", m.name, err)
 		}
 	}
 	return nil
 }
 
-func applyMigration(db *sql.DB, m migration) error {
-	tx, err := db.Begin()
+func applyMigration(ctx context.Context, db *sql.DB, m migration) error {
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec(m.statements); err != nil {
+	if _, err := tx.ExecContext(ctx, m.statements); err != nil {
 		return err
 	}
 	// PRAGMA user_version does not accept bound parameters, and the version comes
 	// from a validated integer file prefix.
-	if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", m.version)); err != nil {
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version = %d", m.version)); err != nil {
 		return fmt.Errorf("set user_version: %w", err)
 	}
 	return tx.Commit()

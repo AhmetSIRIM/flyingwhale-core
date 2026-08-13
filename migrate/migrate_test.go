@@ -79,6 +79,7 @@ func brokenMigrationFS(alreadyApplied int) fstest.MapFS {
 // second Apply call against the same source applies nothing, pinning the
 // skip-already-applied rule.
 func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
+	ctx := t.Context()
 	db := openTestDB(t)
 	source := fstest.MapFS{
 		"migrations/0001_first.sql": &fstest.MapFile{
@@ -89,7 +90,7 @@ func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
 		},
 	}
 
-	if err := Apply(db, source); err != nil {
+	if err := Apply(ctx, db, source); err != nil {
 		t.Fatalf("Apply() first call returned error: %v", err)
 	}
 
@@ -99,7 +100,7 @@ func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
 		t.Errorf("tables after Apply() mismatch (-want +got):\n%s", diff)
 	}
 
-	version, err := schemaVersion(db)
+	version, err := schemaVersion(ctx, db)
 	if err != nil {
 		t.Fatalf("schemaVersion() returned error: %v", err)
 	}
@@ -107,10 +108,10 @@ func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
 		t.Errorf("user_version after Apply() = %d, want 2", version)
 	}
 
-	if err := Apply(db, source); err != nil {
+	if err := Apply(ctx, db, source); err != nil {
 		t.Fatalf("Apply() second call returned error: %v", err)
 	}
-	version, err = schemaVersion(db)
+	version, err = schemaVersion(ctx, db)
 	if err != nil {
 		t.Fatalf("schemaVersion() after second Apply() returned error: %v", err)
 	}
@@ -124,15 +125,16 @@ func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
 // back, and leaves user_version untouched so the caller refuses to treat a
 // half-migrated schema as ready.
 func TestApplyFailsClosedOnBrokenMigration(t *testing.T) {
+	ctx := t.Context()
 	db := openTestDB(t)
 
-	before, err := schemaVersion(db)
+	before, err := schemaVersion(ctx, db)
 	if err != nil {
 		t.Fatalf("schemaVersion() before the broken migration returned error: %v", err)
 	}
 
 	brokenName := fmt.Sprintf("%04d_broken.sql", before+1)
-	err = Apply(db, brokenMigrationFS(before))
+	err = Apply(ctx, db, brokenMigrationFS(before))
 	if err == nil {
 		t.Fatal("Apply() returned nil error, want a failure for the broken migration")
 	}
@@ -140,7 +142,7 @@ func TestApplyFailsClosedOnBrokenMigration(t *testing.T) {
 		t.Errorf("error %q does not name the failing migration file %q", err, brokenName)
 	}
 
-	gotVersion, versionErr := schemaVersion(db)
+	gotVersion, versionErr := schemaVersion(ctx, db)
 	if versionErr != nil {
 		t.Fatalf("schemaVersion() returned error: %v", versionErr)
 	}
