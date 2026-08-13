@@ -73,6 +73,52 @@ func brokenMigrationFS(alreadyApplied int) fstest.MapFS {
 	}
 }
 
+// TestApplyCreatesTablesAndTracksUserVersion pins the happy path: two
+// migrations run in ascending order, each table they create exists
+// afterward, and user_version lands on the highest version applied. A
+// second Apply call against the same source applies nothing, pinning the
+// skip-already-applied rule.
+func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
+	db := openTestDB(t)
+	source := fstest.MapFS{
+		"migrations/0001_first.sql": &fstest.MapFile{
+			Data: []byte("CREATE TABLE first_table (id INTEGER PRIMARY KEY);"),
+		},
+		"migrations/0002_second.sql": &fstest.MapFile{
+			Data: []byte("CREATE TABLE second_table (id INTEGER PRIMARY KEY);"),
+		},
+	}
+
+	if err := Apply(db, source); err != nil {
+		t.Fatalf("Apply() first call returned error: %v", err)
+	}
+
+	tables := queryStrings(t, db, `SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`)
+	wantTables := []string{"first_table", "second_table"}
+	if diff := cmp.Diff(wantTables, tables); diff != "" {
+		t.Errorf("tables after Apply() mismatch (-want +got):\n%s", diff)
+	}
+
+	version, err := schemaVersion(db)
+	if err != nil {
+		t.Fatalf("schemaVersion() returned error: %v", err)
+	}
+	if version != 2 {
+		t.Errorf("user_version after Apply() = %d, want 2", version)
+	}
+
+	if err := Apply(db, source); err != nil {
+		t.Fatalf("Apply() second call returned error: %v", err)
+	}
+	version, err = schemaVersion(db)
+	if err != nil {
+		t.Fatalf("schemaVersion() after second Apply() returned error: %v", err)
+	}
+	if version != 2 {
+		t.Errorf("user_version after second Apply() = %d, want 2 (already-applied migrations must not reapply)", version)
+	}
+}
+
 // TestApplyFailsClosedOnBrokenMigration pins the deploy-safety rule: a
 // failing migration reports the offending file, rolls its partial work
 // back, and leaves user_version untouched so the caller refuses to treat a

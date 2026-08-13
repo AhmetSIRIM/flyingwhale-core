@@ -76,6 +76,13 @@ func (recorder *statusRecorder) Write(body []byte) (int, error) {
 	return recorder.ResponseWriter.Write(body)
 }
 
+// Unwrap returns the wrapped http.ResponseWriter, letting
+// http.ResponseController reach Flush, Hijack, and deadlines through the
+// wrapper.
+func (recorder *statusRecorder) Unwrap() http.ResponseWriter {
+	return recorder.ResponseWriter
+}
+
 // The header is first-write-wins (see WriteHeader above), and the log line
 // must tell the same story the wire does: once a header has committed, a
 // later WriteError describes an envelope the client never received, so the

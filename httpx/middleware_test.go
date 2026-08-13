@@ -59,6 +59,25 @@ func TestRequestIDEchoesAFreshHexIdentifier(t *testing.T) {
 	}
 }
 
+// The id comes from crypto/rand, so a collision across a run of requests
+// would point at a broken random source rather than an expected coincidence.
+func TestRequestIDIsUniquePerRequest(t *testing.T) {
+	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	seen := make(map[string]bool, 50)
+	for attempt := 0; attempt < 50; attempt++ {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/example", nil))
+		id := recorder.Header().Get("X-Request-Id")
+		if seen[id] {
+			t.Fatalf("duplicate request id %q on attempt %d", id, attempt)
+		}
+		seen[id] = true
+	}
+}
+
 // Logging emits exactly one structured line per request carrying the fields
 // a log consumer greps for: method, path, status, duration_ms, error_code.
 // request_id correlation is NewRequestIDLogHandler's job, covered separately
@@ -271,6 +290,22 @@ func TestStatusRecorderKeepsTheFirstWriteHeaderCall(t *testing.T) {
 	}
 	if underlying.Code != http.StatusCreated {
 		t.Errorf("underlying status = %d, want %d", underlying.Code, http.StatusCreated)
+	}
+}
+
+// A statusRecorder wraps but does not hide the underlying ResponseWriter:
+// Unwrap lets http.ResponseController reach a method statusRecorder does
+// not implement itself, such as Flush.
+func TestStatusRecorderUnwrapsForResponseController(t *testing.T) {
+	underlying := httptest.NewRecorder()
+	recorder := newStatusRecorder(underlying)
+
+	controller := http.NewResponseController(recorder)
+	if err := controller.Flush(); err != nil {
+		t.Fatalf("Flush() through the wrapped recorder returned %v, want nil", err)
+	}
+	if !underlying.Flushed {
+		t.Error("underlying httptest.ResponseRecorder was not flushed")
 	}
 }
 
