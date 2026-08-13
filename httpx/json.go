@@ -18,6 +18,8 @@ type errorEnvelope struct {
 	Error errorDetail `json:"error"`
 }
 
+// WriteJSON writes payload to w as a JSON body with the given status code.
+//
 // Marshal happens before the header is written so an encoding failure (for
 // example a NaN float) can still fall back to a 500 instead of leaving a
 // 200 header already committed with a truncated body. The header is not
@@ -48,6 +50,9 @@ func WriteError(w http.ResponseWriter, status int, code Code, message string) {
 	WriteJSON(w, status, errorEnvelope{Error: errorDetail{Code: code, Message: message}})
 }
 
+// DecodeJSON decodes the request body of r as JSON into dst, capping the
+// body at 8KB.
+//
 // Unknown fields are ignored on purpose: a shipped client binary may keep
 // sending a field this server has already stopped reading.
 func DecodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {

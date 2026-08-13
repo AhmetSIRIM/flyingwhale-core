@@ -14,7 +14,10 @@ const bearerPrefix = "Bearer "
 // an empty one, since a deployment without a configured secret must reject
 // every request rather than accept an absent header. The comparison is
 // constant-time, and header may present the secret either raw or with a
-// "Bearer " prefix.
+// "Bearer " prefix. The comparison does not hide the header's length:
+// ConstantTimeCompare returns immediately on a length mismatch. The Bearer
+// prefix match is case-sensitive, so a lowercase "bearer" scheme is
+// rejected.
 func Authorized(secret, header string) bool {
 	if secret == "" {
 		return false

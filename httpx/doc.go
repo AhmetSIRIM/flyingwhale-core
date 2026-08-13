@@ -5,7 +5,8 @@
 // Accept-Language negotiation, and a slog handler that correlates log lines
 // with a request. A request-scoped status recorder couples the envelope and
 // the middlewares so a recorded error code reaches the access log line that
-// matches what the client actually received. Everything that needs a default
-// (rate limit capacity, supported languages, a fallback locale) takes it as
-// a parameter from the consuming application rather than assuming one.
+// matches what the client actually received. Policy defaults (rate limit
+// capacity, supported languages, a fallback locale) come from the caller.
+// The package keeps one safety cap of its own, the request body limit,
+// which DecodeJSONLimit overrides.
 package httpx

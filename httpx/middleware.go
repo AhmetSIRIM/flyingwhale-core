@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// Middleware wraps an http.Handler with additional behavior.
+//
 // Compose Logging outside Recover (Logging(logger)(Recover(logger)(next)))
 // so a panic recovered downstream is written through Logging's own status
 // recorder and the request line reports the resulting status.
@@ -19,6 +21,9 @@ const requestIDHeader = "X-Request-Id"
 
 type requestIDContextKey struct{}
 
+// RequestID assigns a random id to the request, sets it on the response's
+// X-Request-Id header, and stores it in the request context for
+// RequestIDFrom.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := newRequestID()
@@ -27,6 +32,8 @@ func RequestID(next http.Handler) http.Handler {
 	})
 }
 
+// RequestIDFrom returns the request id RequestID stored on ctx, or an empty
+// string if RequestID never ran on this request.
 func RequestIDFrom(ctx context.Context) string {
 	id, _ := ctx.Value(requestIDContextKey{}).(string)
 	return id
@@ -91,6 +98,9 @@ type errorCodeRecorder interface {
 	recordErrorCode(code Code)
 }
 
+// Logging returns a Middleware that logs one line per request through
+// logger, including the response status and any error code WriteError
+// recorded on it.
 func Logging(logger *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -115,6 +125,9 @@ func Logging(logger *slog.Logger) Middleware {
 	}
 }
 
+// Recover returns a Middleware that recovers a panic from the wrapped
+// handler, logs it through logger, and responds with a 500 envelope if the
+// response has not already committed a header.
 func Recover(logger *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

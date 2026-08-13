@@ -132,7 +132,10 @@ func (limiter *rateLimiter) Allow(key string) bool {
 // requestsPerMinute tokens per minute. Capacity is required and has no
 // library-owned default: RateLimit panics if requestsPerMinute is not
 // positive, so a missing or misconfigured limit fails at wiring time rather
-// than silently falling back to a value the caller never chose.
+// than silently falling back to a value the caller never chose. It keys on
+// the peer address, trusting X-Forwarded-For only from a loopback peer and
+// only its rightmost entry, which suits a single trusted reverse proxy on
+// loopback.
 func RateLimit(requestsPerMinute int, now func() time.Time) Middleware {
 	limiter := newRateLimiter(requestsPerMinute, now)
 	return func(next http.Handler) http.Handler {

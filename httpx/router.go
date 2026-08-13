@@ -6,7 +6,8 @@ import (
 )
 
 // Router wraps an http.ServeMux and records every pattern registered through
-// it, so a caller can enumerate the routes it exposes after setup.
+// it, so a caller can enumerate the routes it exposes after setup. Values
+// come from NewRouter; the zero value is not usable.
 type Router struct {
 	mux      *http.ServeMux
 	patterns []string
