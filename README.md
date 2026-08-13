@@ -6,6 +6,7 @@ flyingwhale-core is a shared Go module for FlyingWhale app servers. It holds com
 | --- | --- |
 | `buildinfo` | Reads the build revision and modified flag stamped into a binary. |
 | `daykey` | Turns a time and a timezone offset into a calendar day key. |
+| `httpx` | HTTP primitives shared by FlyingWhale servers: error envelope, request middlewares. |
 | `webhook` | Checks a webhook request against a shared secret. |
 
 This module is available under the MIT license.
