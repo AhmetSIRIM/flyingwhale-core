@@ -19,7 +19,7 @@ func TestRouteGroupPattern(t *testing.T) {
 	}{
 		{name: "method and path", prefix: "/api/v1", input: "GET /usage", want: "GET /api/v1/usage"},
 		{name: "post route", prefix: "/api/v1", input: "POST /recommendations", want: "POST /api/v1/recommendations"},
-		{name: "nested webhook path", prefix: "/api/v1", input: "POST /revenuecat/webhook", want: "POST /api/v1/revenuecat/webhook"},
+		{name: "nested webhook path", prefix: "/api/v1", input: "POST /billing/webhook", want: "POST /api/v1/billing/webhook"},
 		{name: "pattern without a method", prefix: "/api/v1", input: "/feedback", want: "/api/v1/feedback"},
 		{name: "empty prefix keeps the pattern", prefix: "", input: "GET /healthz", want: "GET /healthz"},
 		{name: "empty prefix subtree", prefix: "", input: "/legal/", want: "/legal/"},
