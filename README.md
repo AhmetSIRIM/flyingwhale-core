@@ -8,6 +8,7 @@ flyingwhale-core is a shared Go module for FlyingWhale app servers. It holds com
 | `daykey` | Turns a time and a timezone offset into a calendar day key. |
 | `httpx` | HTTP primitives shared by FlyingWhale servers: error envelope, request middlewares. |
 | `migrate` | SQLite migration runner driven by user_version. |
+| `textmatch` | Multilingual keyword matching: word-boundary for alphabetic scripts, substring for CJK. |
 | `webhook` | Checks a webhook request against a shared secret. |
 
 This module is available under the MIT license.
