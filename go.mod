@@ -1,5 +1,8 @@
 module github.com/AhmetSIRIM/flyingwhale-core
 
+// The go directive tracks the consumer's toolchain rather than this module's
+// code minimum, because the test dependencies already require a newer
+// toolchain than the code does.
 go 1.26
 
 require (
