@@ -85,3 +85,17 @@ func TestRouteGroupAppliesChainInOrderAndRecordsPatterns(t *testing.T) {
 		t.Errorf("public route ran the api chain: %v", callOrder)
 	}
 }
+
+// Mutating the slice Patterns returns must not change the router's own
+// record: the method hands callers a copy, not the internal slice.
+func TestRouterPatternsReturnsACopy(t *testing.T) {
+	routerUnderTest := NewRouter()
+	routerUnderTest.Group("").HandleFunc("GET /healthz", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+
+	patterns := routerUnderTest.Patterns()
+	patterns[0] = "GET /tampered"
+
+	if diff := cmp.Diff([]string{"GET /healthz"}, routerUnderTest.Patterns()); diff != "" {
+		t.Errorf("mutating the returned slice changed the router's record (-want +got):\n%s", diff)
+	}
+}
