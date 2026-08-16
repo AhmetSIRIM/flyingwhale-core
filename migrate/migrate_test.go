@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -167,5 +168,51 @@ func TestLoadMigrationsRejectsUnnumberedFiles(t *testing.T) {
 
 	if _, err := loadMigrations(source); err == nil {
 		t.Fatal("loadMigrations() returned nil error, want a failure for a file without a version prefix")
+	}
+}
+
+// Two files sharing a version would apply in a nondeterministic order, so a
+// duplicate prefix must fail the run rather than race on application order.
+func TestLoadMigrationsRejectsDuplicateVersions(t *testing.T) {
+	source := fstest.MapFS{
+		"migrations/0001_first.sql":  &fstest.MapFile{Data: []byte("SELECT 1;")},
+		"migrations/0001_second.sql": &fstest.MapFile{Data: []byte("SELECT 2;")},
+	}
+
+	if _, err := loadMigrations(source); err == nil {
+		t.Fatal("loadMigrations() returned nil error, want a failure for duplicate version prefixes")
+	}
+}
+
+// TestApplyReturnsErrNoMigrationsForAnEmptySource pins the sentinel a
+// consumer branches on when a source holds no migration files at all.
+func TestApplyReturnsErrNoMigrationsForAnEmptySource(t *testing.T) {
+	ctx := t.Context()
+	db := openTestDB(t)
+	source := fstest.MapFS{
+		"migrations/README.txt": &fstest.MapFile{Data: []byte("not a migration")},
+	}
+
+	if err := Apply(ctx, db, source); !errors.Is(err, ErrNoMigrations) {
+		t.Fatalf("Apply() error = %v, want ErrNoMigrations", err)
+	}
+}
+
+// TestLatestVersionResolvesTheHighestVersion pins the exported helper that
+// lets a consumer assert the schema state it should land on, instead of
+// re-parsing the NNNN prefixes in its own test code.
+func TestLatestVersionResolvesTheHighestVersion(t *testing.T) {
+	source := fstest.MapFS{
+		"migrations/0001_first.sql":  &fstest.MapFile{Data: []byte("SELECT 1;")},
+		"migrations/0003_third.sql":  &fstest.MapFile{Data: []byte("SELECT 3;")},
+		"migrations/0002_second.sql": &fstest.MapFile{Data: []byte("SELECT 2;")},
+	}
+
+	latest, err := LatestVersion(source)
+	if err != nil {
+		t.Fatalf("LatestVersion() returned error: %v", err)
+	}
+	if latest != 3 {
+		t.Errorf("LatestVersion() = %d, want 3", latest)
 	}
 }
