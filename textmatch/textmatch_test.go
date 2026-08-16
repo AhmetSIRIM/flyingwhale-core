@@ -36,6 +36,12 @@ func TestMatchesKeyword(t *testing.T) {
 			want:    true,
 		},
 		{
+			name:    "cjk keyword absent from the text does not match",
+			text:    "紅茶を飲みたい",
+			keyword: "咖啡",
+			want:    false,
+		},
+		{
 			name:    "latin keyword inside a longer word does not match",
 			text:    "barbershop",
 			keyword: "bar",
@@ -200,6 +206,7 @@ func TestContainsAtWordBoundary(t *testing.T) {
 		{name: "an accented multi-byte keyword matches the whole haystack", haystack: "café", keyword: "café", want: true},
 		{name: "an accented multi-byte keyword followed by a letter is rejected", haystack: "caféx", keyword: "café", want: false},
 		{name: "a cjk rune before the match blocks the boundary since it is a letter", haystack: "咖啡bar", keyword: "bar", want: false},
+		{name: "a cjk rune after the match blocks the boundary since it is a letter", haystack: "bar咖啡", keyword: "bar", want: false},
 	}
 
 	for _, test := range tests {
