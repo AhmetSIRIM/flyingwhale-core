@@ -1,0 +1,42 @@
+# Two dependency surfaces drift silently here: Go module versions, and the
+# action pins inside the workflows. Nobody watches either by hand, so an
+# update arrives as a pull request and CI decides whether it is safe before a
+# human merges it.
+#
+# The two streams stay separate on purpose. A library bump can change module
+# behaviour, an action bump changes how CI behaves, and mixing them makes a
+# red check harder to attribute.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Europe/Istanbul
+    commit-message:
+      prefix: build(go)
+    groups:
+      # A quiet week should cost one review, not five. Major updates fall
+      # outside the group deliberately: a major bump is the one that earns a
+      # read of its own.
+      go-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Europe/Istanbul
+    commit-message:
+      prefix: ci
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
