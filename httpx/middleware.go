@@ -21,9 +21,10 @@ const requestIDHeader = "X-Request-Id"
 
 type requestIDContextKey struct{}
 
-// RequestID assigns a random id to the request, sets it on the response's
-// X-Request-Id header, and stores it in the request context for
-// RequestIDFrom.
+// RequestID assigns a fresh random id to the request, sets it on the
+// response's X-Request-Id header, and stores it in the request context for
+// RequestIDFrom. An inbound X-Request-Id is ignored and replaced, so a
+// client or proxy cannot choose the id the server reports.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := newRequestID()

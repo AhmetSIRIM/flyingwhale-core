@@ -75,9 +75,11 @@ func brokenMigrationFS(alreadyApplied int) fstest.MapFS {
 
 // TestApplyCreatesTablesAndTracksUserVersion pins the happy path: two
 // migrations run in ascending order, each table they create exists
-// afterward, and user_version lands on the highest version applied. A
-// second Apply call against the same source applies nothing, pinning the
-// skip-already-applied rule.
+// afterward, and user_version lands on the highest version applied. The
+// second migration inserts into the first's table, so an out-of-order run
+// would fail; success therefore pins the order directly rather than relying
+// on the sorted table list. A second Apply call against the same source
+// applies nothing, pinning the skip-already-applied rule.
 func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
 	ctx := t.Context()
 	db := openTestDB(t)
@@ -86,7 +88,7 @@ func TestApplyCreatesTablesAndTracksUserVersion(t *testing.T) {
 			Data: []byte("CREATE TABLE first_table (id INTEGER PRIMARY KEY);"),
 		},
 		"migrations/0002_second.sql": &fstest.MapFile{
-			Data: []byte("CREATE TABLE second_table (id INTEGER PRIMARY KEY);"),
+			Data: []byte("INSERT INTO first_table (id) VALUES (1);\nCREATE TABLE second_table (id INTEGER PRIMARY KEY);"),
 		},
 	}
 

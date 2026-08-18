@@ -7,6 +7,7 @@
 // the middlewares so a recorded error code reaches the access log line that
 // matches what the client actually received. Policy defaults (rate limit
 // capacity, supported languages, a fallback locale) come from the caller.
-// The package keeps one safety cap of its own, the request body limit,
-// which DecodeJSONLimit overrides.
+// The package keeps its own safety caps: the request body limit, which
+// DecodeJSONLimit overrides, and the rate limiter's bucket-map cap, which
+// fails closed on new keys once the map is full.
 package httpx
