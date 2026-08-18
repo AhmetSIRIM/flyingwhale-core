@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -24,10 +25,10 @@ func (rt *Router) Mux() *http.ServeMux {
 	return rt.mux
 }
 
-// Patterns returns every pattern registered through the router's route
-// groups, in registration order.
+// Patterns returns a copy of every pattern registered through the router's
+// route groups, in registration order.
 func (rt *Router) Patterns() []string {
-	return rt.patterns
+	return slices.Clone(rt.patterns)
 }
 
 // Group returns a RouteGroup that prefixes every pattern it registers with
