@@ -7,7 +7,7 @@ go 1.26
 
 require (
 	github.com/google/go-cmp v0.7.0
-	modernc.org/sqlite v1.56.0
+	modernc.org/sqlite v1.57.0
 )
 
 require (
